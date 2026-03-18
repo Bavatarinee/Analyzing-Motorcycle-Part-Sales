@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MotoSales Analytics — Motorcycle Part Sales Dashboard</title>
+  <meta name="description" content="Interactive analytics dashboard for motorcycle part sales data. Explore revenue trends, product performance, warehouse comparisons, and payment insights." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">⚙️</div>
+      <div class="brand-text">
+        <span class="brand-name">MotoSales</span>
+        <span class="brand-sub">Analytics</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#overview" class="nav-item active" id="nav-overview" onclick="showSection('overview')">
+        <span class="nav-icon">📊</span>
+        <span>Overview</span>
+      </a>
+      <a href="#products" class="nav-item" id="nav-products" onclick="showSection('products')">
+        <span class="nav-icon">🔧</span>
+        <span>Product Lines</span>
+      </a>
+      <a href="#warehouse" class="nav-item" id="nav-warehouse" onclick="showSection('warehouse')">
+        <span class="nav-icon">🏭</span>
+        <span>Warehouses</span>
+      </a>
+      <a href="#clients" class="nav-item" id="nav-clients" onclick="showSection('clients')">
+        <span class="nav-icon">👥</span>
+        <span>Client Types</span>
+      </a>
+      <a href="#payments" class="nav-item" id="nav-payments" onclick="showSection('payments')">
+        <span class="nav-icon">💳</span>
+        <span>Payments</span>
+      </a>
+      <a href="#trends" class="nav-item" id="nav-trends" onclick="showSection('trends')">
+        <span class="nav-icon">📈</span>
+        <span>Trends</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="data-source">
+        <div class="ds-dot"></div>
+        <span>Live Dataset</span>
+      </div>
+      <div class="record-count" id="record-count">Loading...</div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <button class="menu-btn" id="menu-btn" onclick="toggleSidebar()">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="topbar-title" id="topbar-title">Overview</div>
+      <div class="topbar-filters">
+        <div class="filter-group">
+          <label for="filter-warehouse">Warehouse</label>
+          <select id="filter-warehouse">
+            <option value="all">All</option>
+            <option value="North">North</option>
+            <option value="Central">Central</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-client">Client</label>
+          <select id="filter-client">
+            <option value="all">All</option>
+            <option value="Retail">Retail</option>
+            <option value="Wholesale">Wholesale</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-month">Month</label>
+          <select id="filter-month">
+            <option value="all">All</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+          </select>
+        </div>
+        <button class="apply-btn" onclick="applyFilters()">Apply</button>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div class="loading-state" id="loading-state">
+      <div class="loader-ring"></div>
+      <p>Parsing dataset...</p>
+    </div>
+
+    <!-- ===== OVERVIEW SECTION ===== -->
+    <section class="section active" id="section-overview">
+      <div class="section-header">
+        <h1>Sales Overview</h1>
+        <p>High-level performance metrics across all warehouses and product lines</p>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card" id="kpi-revenue">
+          <div class="kpi-icon" style="background: linear-gradient(135deg,#6c63ff,#a855f7)">💰</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Revenue</span>
+            <span class="kpi-value" id="kpi-total-revenue">—</span>
+            <span class="kpi-sub" id="kpi-revenue-sub">—</span>
+          </div>
+        </div>
+        <div class="kpi-card" id="kpi-orders">
+          <div class="kpi-icon" style="background: linear-gradient(135deg,#06b6d4,#3b82f6)">📦</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Orders</span>
+            <span class="kpi-value" id="kpi-total-orders">—</span>
+            <span class="kpi-sub" id="kpi-orders-sub">—</span>
+          </div>
+        </div>
+        <div class="kpi-card" id="kpi-qty">
+          <div class="kpi-icon" style="background: linear-gradient(135deg,#f59e0b,#ef4444)">🏍️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Units Sold</span>
+            <span class="kpi-value" id="kpi-total-qty">—</span>
+            <span class="kpi-sub" id="kpi-qty-sub">—</span>
+          </div>
+        </div>
+        <div class="kpi-card" id="kpi-avg">
+          <div class="kpi-icon" style="background: linear-gradient(135deg,#10b981,#059669)">📋</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Avg Order Value</span>
+            <span class="kpi-value" id="kpi-avg-order">—</span>
+            <span class="kpi-sub" id="kpi-avg-sub">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="charts-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Revenue by Product Line</h3>
+            <div class="chart-badge">Bar Chart</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-product-bar"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Revenue Share</h3>
+            <div class="chart-badge">Doughnut</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-product-donut"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Daily Revenue Trend</h3>
+            <div class="chart-badge">Line</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-daily-revenue"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Payment Method Mix</h3>
+            <div class="chart-badge">Pie</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-payment-pie"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PRODUCTS SECTION ===== -->
+    <section class="section" id="section-products">
+      <div class="section-header">
+        <h1>Product Line Analysis</h1>
+        <p>Deep dive into revenue, quantity, and pricing by motorcycle part category</p>
+      </div>
+
+      <!-- Product KPIs -->
+      <div class="product-leader-row" id="product-leader-row"></div>
+
+      <div class="charts-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Revenue vs Quantity by Product Line</h3>
+            <div class="chart-badge">Grouped Bar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-product-grouped"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Avg Unit Price by Product Line</h3>
+            <div class="chart-badge">Radar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-product-radar"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <h3>Product Performance Table</h3>
+            <div class="chart-badge">Summary</div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="product-table">
+              <thead>
+                <tr>
+                  <th>Product Line</th>
+                  <th>Orders</th>
+                  <th>Units Sold</th>
+                  <th>Total Revenue</th>
+                  <th>Avg Order Value</th>
+                  <th>Avg Unit Price</th>
+                  <th>Revenue Share</th>
+                </tr>
+              </thead>
+              <tbody id="product-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== WAREHOUSE SECTION ===== -->
+    <section class="section" id="section-warehouse">
+      <div class="section-header">
+        <h1>Warehouse Performance</h1>
+        <p>Compare North and Central warehouse across revenue, orders, and product lines</p>
+      </div>
+
+      <div class="warehouse-comparison" id="warehouse-comparison"></div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Revenue by Warehouse</h3>
+            <div class="chart-badge">Bar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-warehouse-revenue"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Product Mix — North Warehouse</h3>
+            <div class="chart-badge">Pie</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-north-product"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Product Mix — Central Warehouse</h3>
+            <div class="chart-badge">Pie</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-central-product"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <h3>Monthly Revenue by Warehouse</h3>
+            <div class="chart-badge">Line</div>
+          </div>
+          <div class="chart-wrap tall">
+            <canvas id="chart-warehouse-monthly"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CLIENTS SECTION ===== -->
+    <section class="section" id="section-clients">
+      <div class="section-header">
+        <h1>Client Type Analysis</h1>
+        <p>Retail vs Wholesale performance, behavior and revenue contribution</p>
+      </div>
+
+      <div class="client-split" id="client-split"></div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Revenue Split</h3>
+            <div class="chart-badge">Doughnut</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-client-split"></canvas>
+          </div>
+        </div>
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Avg Order Value — Retail vs Wholesale by Product</h3>
+            <div class="chart-badge">Grouped Bar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-client-product"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <h3>Daily Orders: Retail vs Wholesale</h3>
+            <div class="chart-badge">Line</div>
+          </div>
+          <div class="chart-wrap tall">
+            <canvas id="chart-client-daily"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PAYMENTS SECTION ===== -->
+    <section class="section" id="section-payments">
+      <div class="section-header">
+        <h1>Payment Insights</h1>
+        <p>How customers pay and the financial impact of payment fees</p>
+      </div>
+
+      <div class="payment-cards" id="payment-cards"></div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Payment Method Share (by Orders)</h3>
+            <div class="chart-badge">Doughnut</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-pay-method"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Revenue by Payment Method</h3>
+            <div class="chart-badge">Bar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-pay-revenue"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Payment Method by Client Type</h3>
+            <div class="chart-badge">Stacked Bar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-pay-client"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TRENDS SECTION ===== -->
+    <section class="section" id="section-trends">
+      <div class="section-header">
+        <h1>Sales Trends</h1>
+        <p>Time-series analysis of revenue, orders, and quantity over the sales period</p>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <h3>Monthly Revenue Trend</h3>
+            <div class="chart-badge">Area</div>
+          </div>
+          <div class="chart-wrap tall">
+            <canvas id="chart-monthly-area"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Weekly Revenue by Product Line</h3>
+            <div class="chart-badge">Stacked Bar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-weekly-stacked"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Orders per Day of Week</h3>
+            <div class="chart-badge">Polar</div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-dow"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <h3>Product Line Revenue — Monthly Breakdown</h3>
+            <div class="chart-badge">Grouped Bar</div>
+          </div>
+          <div class="chart-wrap tall">
+            <canvas id="chart-monthly-product"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
